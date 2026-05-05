@@ -317,21 +317,35 @@ WHERE teams.yearid >= 2000
 GROUP BY teams.teamid, avg_salary, avg_wins;
 
 --Q12
-SELECT team, SUM(games) AS total_games, SUM(attendance) AS total_attnd, year
-FROM homegames
-WHERE year >= 1985
-GROUP BY team, year
-ORDER BY year DESC;
+WITH ghome_attnd AS (
+	SELECT team, 
+			SUM(games) AS total_games, 
+			SUM(attendance) AS total_attnd, 
+			year
+	FROM homegames
+	WHERE year >= 1985
+	GROUP BY team, year
+	ORDER BY year DESC
+)
+
+SELECT ghome, 
+		attendance, 
+		yearid, 
+		w, 
+		total_games,
+		total_attnd,
+		total_attnd - attendance AS attnd_diff
+FROM teams
+LEFT JOIN ghome_attnd
+	ON ghome_attnd.year = teams.yearid
+	AND ghome_attnd.team = teams.teamidretro
+WHERE yearid >= 1985
+ORDER BY yearid DESC;
 
 SELECT *
 FROM homegames
 WHERE year > 1984
 LIMIT 100
-
-SELECT ghome, attendance, teamid, yearid, w, g, teamidretro
-FROM teams
-WHERE yearid >= 1985
-LIMIT 100;
 
 SELECT *
 FROM teams
