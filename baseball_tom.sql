@@ -316,7 +316,7 @@ LEFT JOIN team_wins
 WHERE teams.yearid >= 2000
 GROUP BY teams.teamid, avg_salary, avg_wins;
 
---Q12
+--Q12.a
 WITH ghome_attnd AS (
 	SELECT team, 
 			SUM(games) AS total_games, 
@@ -329,9 +329,11 @@ WITH ghome_attnd AS (
 )
 
 SELECT ghome, 
+		team,
 		attendance, 
-		yearid, 
 		w, 
+		wswin,
+		yearid, 
 		total_games,
 		total_attnd,
 		total_attnd - attendance AS attnd_diff
@@ -341,6 +343,64 @@ LEFT JOIN ghome_attnd
 	AND ghome_attnd.team = teams.teamidretro
 WHERE yearid >= 1985
 ORDER BY yearid DESC;
+
+--Q12.b
+WITH ws_winners AS (
+	SELECT teamid,
+			yearid,
+			attendance AS ws_year_attnd,
+			w AS ws_year_wins
+	FROM teams
+	WHERE yearid >= 1985  --I used 1985 as an arbitrary cutoff year 
+						 --so I didnt get data back to 1870
+		AND wswin = 'Y'
+)
+
+SELECT	ws_winners.teamid,
+		ws_winners.yearid AS ws_year,
+		ws_winners.ws_year_attnd,
+		next_year.yearid AS year_after_ws,
+		next_year.attendance AS next_year_attnd,
+		ws_winners.ws_year_attnd - next_year.attendance AS attnd_diff
+FROM ws_winners
+LEFT JOIN teams next_year
+	ON ws_winners.teamid = next_year.teamid
+	AND ws_winners.yearid = next_year.yearid + 1
+ORDER BY ws_winners.yearid DESC;
+
+--Q12.c
+WITH playoff_winners AS (
+	SELECT teamid,
+			yearid,
+			attendance AS playoff_year_attnd,
+			w AS playoff_year_wins
+	FROM teams
+	WHERE yearid >= 1985 --I used 1985 as an arbitrary cutoff year 
+						 --so I didnt get data back to 1870
+		AND divwin = 'Y' OR wcwin = 'Y'
+)
+
+SELECT	playoff_winners.teamid,
+		playoff_winners.yearid AS playoff_year,
+		playoff_winners.playoff_year_attnd,
+		next_year.yearid AS year_after_ws,
+		next_year.attendance AS next_year_attnd,
+		next_year.attendance - playoff_winners.playoff_year_attnd AS attnd_diff
+FROM playoff_winners
+LEFT JOIN teams next_year
+	ON playoff_winners.teamid = next_year.teamid
+	AND playoff_winners.yearid = next_year.yearid + 1
+ORDER BY playoff_winners.yearid DESC;
+
+--Q13
+SELECT people.throws,
+       ROUND(AVG(pitching.era::numeric), 3) AS avg_era,
+       ROUND(AVG(((pitching.h + pitching.bb) / NULLIF(pitching.ipouts / 3.0, 0))::numeric), 3) AS avg_whip
+FROM pitching
+JOIN people
+    ON people.playerid = pitching.playerid
+WHERE people.throws IN ('L', 'R')
+GROUP BY people.throws;
 
 SELECT *
 FROM homegames
