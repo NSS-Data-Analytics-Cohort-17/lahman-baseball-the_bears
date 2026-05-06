@@ -201,7 +201,7 @@ GROUP BY playerid, namegiven, namelast, career_high
 HAVING SUM(hr) = career_high
 ORDER BY hr_2016 DESC;
 
--- OEQ: 1 Is there any correlation between number of wins and team salary? Use data from 2000 and later to answer this question. 
+-- OEQ-1: Is there any correlation between number of wins and team salary? Use data from 2000 and later to answer this question. 
 -- As you do this analysis, keep in mind that salaries across the whole league tend to increase together, so you may want to look on a year-by-year basis.
 
 -- Comparing average salaries of teams by year with total wins
@@ -240,3 +240,55 @@ SELECT
 FROM teams
 	INNER JOIN team_salaries USING (yearid, teamid)
 WHERE yearid >= 2000;
+
+-- OEQ-2: In this question, you will explore the connection between number of wins and attendance.
+-- a. Does there appear to be any correlation between attendance at home games and number of wins?
+-- b. Do teams that win the world series see a boost in attendance the following year? What about teams that made the playoffs? Making the playoffs means either being a division winner or a wild card winner.
+WITH team_salaries AS (
+	SELECT
+		yearid,
+		teamid,
+		ROUND(SUM(salary)::numeric, 0) AS team_salary
+	FROM teams
+		INNER JOIN salaries USING (yearid, teamid)
+	GROUP BY yearid, teamid
+)
+SELECT yearid, teamid, w, attendance, team_salary
+FROM teams
+	INNER JOIN team_salaries USING (yearid, teamid);
+
+WITH winning_years AS(
+	SELECT yearid AS ws_year, 
+		teamid, 
+		attendance, 
+		WSWin
+	FROM teams
+	WHERE wswin = 'Y' AND yearid >= 1985
+)
+SELECT yearid,
+	teamid,
+	teams.attendance,
+	(yearid - ws_year) AS yrs_since_ws
+FROM teams
+	INNER JOIN winning_years USING (teamid)
+WHERE (ws_year - yearid) < 5 AND (yearid - ws_year) < 5;
+
+WITH playoff_years AS(
+	SELECT yearid AS po_year,
+		teamid,
+		attendance,
+		DivWin,
+		WCWin
+	FROM teams
+	WHERE divwin = 'Y' OR wcwin = 'Y'
+)
+SELECT yearid,
+	teamid,
+	teams.attendance,
+	po_year
+FROM teams
+	INNER JOIN playoff_years USING (teamid)
+WHERE (po_year - yearid) < 5 AND (yearid - po_year) < 5;
+
+-- OEQ-3: It is thought that since left-handed pitchers are more rare, causing batters to face them less often, that they are more effective. Investigate this claim and present evidence to either support or dispute this claim. 
+-- First, determine just how rare left-handed pitchers are compared with right-handed pitchers. Are left-handed pitchers more likely to win the Cy Young Award? Are they more likely to make it into the hall of fame?
